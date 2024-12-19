@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; text-align: center;background-image: url(https://scontent.fwnp1-1.fna.fbcdn.net/v/t39.30808-6/470171912_569094405835961_3724716131072882170_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=100&ccb=1-7&_nc_sid=833d8c&_nc_eui2=AeE1c7UUIV8Zwz4vCBQSP_Z2IPvfgFvPnzAg-9-AW8-fMOc84BcxuXQwsi1wdVLGmj7b0rZg69ODC0noXJw-eCx1&_nc_ohc=IVJqO-vD4b4Q7kNvgEtpLmF&_nc_zt=23&_nc_ht=scontent.fwnp1-1.fna&_nc_gid=AmWGpxAE7x-Anr_f67Y9Qk1&oh=00_AYCPXBBZZ-F3ktE-iG-Tb1w2agi8DEHg7pOBEEqq9cknhQ&oe=676568C3); background-size: cover; }
+        .announcement-container { max-width: 800px; margin: 20px auto; }
+        .announcement { padding: 10px; border: 1px solid #0b0b0b; margin-bottom: 10px; }
+        h2 { font-size: 24px; color: #4CAF50; }
+        .announcement-title { font-size: 20px; color: #333; }
+        .announcement-content { font-size: 16px; color: #555; }
+        .logout-btn { padding: 8px 12px; background-color: red; color: white; cursor: pointer; }
+    </style>
+</head>
+<body>
+   
+    <h1>STUDENT DASHBOARD</h1>
+    <button id="logout-btn">Logout</button>
+    
+    <h2>Announcements</h2>
+    <div id="announcements">
+    </div>
+    
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = 'form.html'; 
+        }
+    
+        const userInfo = JSON.parse(atob(token.split('.')[1]));
+        if (userInfo.role !== 'Student') {
+            window.location.href = 'dashboard.html';
+        }
+    
+        document.getElementById('logout-btn').onclick = () => {
+            localStorage.removeItem('token');
+            window.location.href = 'form.html'; 
+        };
+    
+        async function fetchAnnouncements() {
+            try {
+                const response = await fetch('http://localhost:3001/api/announcements', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+    
+                const announcements = await response.json();
+                const announcementsContainer = document.getElementById('announcements');
+                announcementsContainer.innerHTML = ''; 
+    
+                announcements.forEach(announcement => {
+                    const announcementDiv = document.createElement('div');
+                    announcementDiv.classList.add('announcement');
+                    announcementDiv.innerHTML = `
+                        <div class="announcement-title">${announcement.title}</div>
+                        <div class="announcement-content">${announcement.content}</div>
+                    `;
+                    announcementsContainer.appendChild(announcementDiv);
+                });
+            } catch (err) {
+                alert('Error fetching announcements: ' + err.message);
+            }
+        }
+    
+        fetchAnnouncements();
+    </script>
+</body>
+</html>    
