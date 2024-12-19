@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; text-align: center;background-image: url(https://i0.wp.com/thewomenslibrary.org.au/wp-content/uploads/2023/01/Herland2019_Mielamalyon-cropped-scaled.jpg?resize=1400%2C1054&ssl=1); background-size: cover;}
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 10px; text-align: left; border: 1px solid #410303;color: rgb(0, 0, 0);background-color: rgb(204, 202, 201); }
+        button { padding: 8px 12px; margin: 5px; cursor: pointer; background-color: #4CAF50; color: white; border: none; }
+        .delete-btn { background-color: red; }
+        .edit-btn { background-color: orange; }
+        .announcement-form input, .announcement-form textarea { width: 100%; padding: 10px; margin: 10px 0; }
+        .announcement-form button { background-color: blue; }
+        h2{color: white;}
+    </style>
+</head>
+<body>
+    <h1>Welcome to the Dashboard</h1>
+    <button id="logout-btn">Logout</button>
+    <h2>Add Announcement</h2>
+    <form id="announcement-form">
+        <input type="text" id="announcement-title" placeholder="Announcement Title" required>
+        <textarea id="announcement-content" placeholder="Announcement Content" required></textarea>
+        <button type="submit">Add Announcement</button>
+    </form>
+
+    <h2>Add Student</h2>
+    <form id="add-student-form">
+        <input type="text" id="name" placeholder="Name" required>
+        <input type="text" id="course" placeholder="Course" required>
+        <button type="submit">Add Student</button>
+    </form>
+
+    <h2>Student List</h2>
+<table id="students-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Course</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        
+    </tbody>
+</table>
+
+    <script>
+          const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'form.html'; 
+    }
+async function fetchStudents() {
+    try {
+        const response = await fetch('http://localhost:3001/api/students', {
+            headers: {
+                'Authorization': 'Bearer ' + token  
+            }
+        });
+        if (!response.ok) {
+            throw new Error('Error fetching students');
+        }
+
+        const students = await response.json(); 
+        const tableBody = document.querySelector('#students-table tbody');
+        tableBody.innerHTML = '';  
+
+        
+        if (students.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="3">No students found.</td></tr>';
+        } else {
+            
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${student.name}</td>
+                    <td>${student.course}</td>
+                    <td>
+                        <button class="edit-btn" onclick="editStudent(${student.id}, '${student.name}', '${student.course}')">Edit</button>
+                        <button class="delete-btn" onclick="deleteStudent(${student.id})">Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+    } catch (err) {
+        console.error('Error fetching students:', err);
+        const tableBody = document.querySelector('#students-table tbody');
+        tableBody.innerHTML = '<tr><td colspan="3">Error loading students data.</td></tr>';
+    }
+}
+fetchStudents();
+
+document.getElementById('add-student-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('name').value;
+    const course = document.getElementById('course').value;
+
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch('http://localhost:3001/api/students', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token 
+            },
+            body: JSON.stringify({ name, course })
+        });
+
+        const result = await response.json(); 
+        if (response.ok) {
+            alert(result.message); 
+            fetchStudents(); 
+        } else {
+            alert(result.message || 'Error adding student.');
+        }
+    } catch (err) {
+        alert('Error adding student: ' + err.message);
+    }
+});
+document.getElementById('announcement-form').addEventListener('submit', async (e) => {
+        e.preventDefault(); 
+        const title = document.getElementById('announcement-title').value;
+        const content = document.getElementById('announcement-content').value;
+
+        const token = localStorage.getItem('token');
+        try {
+            const response = await fetch('http://localhost:3001/api/announcements', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({ title, content })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                alert(result.message);
+                window.location.href = 'student.html';  
+            } else {
+                alert(result.message || 'Error adding announcement.');
+            }
+        } catch (err) {
+            alert('Error adding announcement: ' + err.message);
+        }
+    });
+       
+        async function editStudent(id, name, course) {
+            const newName = prompt('Edit Name', name);
+            const newCourse = prompt('Edit Course', course);
+
+            if (newName && newCourse) {
+                try {
+                    const response = await fetch(`http://localhost:3001/api/students/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({ name: newName, course: newCourse })
+                    });
+
+                    const result = await response.json();
+                    alert(result.message);
+                    if (response.ok) {
+                        fetchStudents(); 
+                    }
+                } catch (err) {
+                    alert('Error editing student: ' + err.message);
+                }
+            }
+        }
+
+        async function deleteStudent(id) {
+            const confirmDelete = confirm('Are you sure you want to delete this student?');
+            if (confirmDelete) {
+                try {
+                    const response = await fetch(`http://localhost:3001/api/students/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': 'Bearer ' + token
+                        }
+                    });
+
+                    const result = await response.json();
+                    alert(result.message);
+                    if (response.ok) {
+                        fetchStudents(); 
+                    }
+                } catch (err) {
+                    alert('Error deleting student: ' + err.message);
+                }
+            }
+        }
+
+        fetchStudents();
+    </script>
+</body>
+</html>
+
